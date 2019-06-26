@@ -1,8 +1,23 @@
 ### Da Vinci API
 At the TU/e and Fontys we have a lot of technical knowledge. Also at Da Vinci, we have some apps that we have developed ourselves. To link these apps to our member administration system, this library has been developed.
 
+##### Install
+You should import the `Client` class through Composer into your application. For Composer, you import this git repository with the following code:
+
+```
+"require": {
+	"e-s-h-da-vinci\api-lib": "dev-master"
+},
+"repositories": [
+    {
+        "type": "vcs",
+    	  "url": "https://github.com/e-s-h-da-vinci/api-lib"
+	}
+]
+```
+
 ##### Create a Client
-You should import the `Client` class through Composer (`composer require e-s-h-da-vinci\api-lib`) into your application. You can then use the following code to get an example member list:
+You can use the following code to get an example member list:
 
 ```
 use ESHDaVinci\API\Client;
@@ -14,7 +29,7 @@ $client = new Client(
 var_dump($client->getListOfNames(true));
 ```
 
-This will give you a list of all active members.
+This will give you a list of all active members. You can replace the function with any of those specified below.
 You should replace `your-api-key` and `your-api-secret` with the key and secret that you got from the Communicacie!
 
 
