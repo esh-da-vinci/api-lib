@@ -1,0 +1,20 @@
+{
+    "name": "e-s-h-da-vinci/api-lib.git",
+    "description": "PHP Library for the Member API Framework",
+    "authors": [
+        {
+            "name": "Christiaan Goossens",
+            "email": "contact@christiaangoossens.nl"
+        }
+    ],
+    "type": "library",
+    "require": {
+		    "php": ">=7.1",
+        "guzzlehttp/guzzle": "^6.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "ESHDaVinci\\API\\": "src/"
+        }
+    }
+}
