@@ -6,7 +6,7 @@ You should import the `Client` class through Composer into your application. For
 
 ```
 "require": {
-	"e-s-h-da-vinci\api-lib": "dev-master"
+	"e-s-h-da-vinci/api-lib": "dev-master"
 },
 "repositories": [
     {
