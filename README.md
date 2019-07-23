@@ -30,7 +30,7 @@ var_dump($client->getListOfNames(true));
 ```
 
 This will give you a list of all active members. You can replace the function with any of those specified below.
-You should replace `your-api-key` and `your-api-secret` with the key and secret that you got from the Communicacie!
+You should replace `your-api-key` and `your-api-secret` with the key and secret that you got from the Communicatcie!
 
 
 ##### Available functions
