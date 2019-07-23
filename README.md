@@ -45,3 +45,16 @@ Gets name corresponding to given ID
 
 ###### getMemberList($active = false)
 Gets a member list, similar to getListOfNames, but returns array of arrays with more info, such as the initials.
+
+###### getMember(int $id)
+Gets data about this member from the system. Will include meta fields, such as nhb_number, honorary_member etc.
+
+###### getMembershipsByID(int $id)
+Lists all memberships registered in the system for this user. Can also include memberships that have not been paid yet.
+
+###### getPayableMembershipsByID(int $id)
+List all memberships that have yet to be paid for this member.
+
+
+##### Exceptions
+Exceptions will be thrown on requests that your app lacks permission for, or when the server cannot be reached. Exceptions include `NotFoundException`, `PermissionDeniedException`.

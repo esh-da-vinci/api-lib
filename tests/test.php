@@ -13,8 +13,8 @@ use ESHDaVinci\API\Client;
 include "credentials.php";
 
 $client = new Client(
-  $key,
-  $secret
+    $key,
+    $secret
 );
 
 echo "getListOfNames()\n";
@@ -23,5 +23,14 @@ echo "============\n";
 echo "authenticate(2, 12345)\n";
 var_dump($client->authenticate(2, "12345"));
 echo "============\n";
+echo "getMemberList(false)\n";
+var_dump($client->getMemberList(false));
+echo "============\n";
 echo "getNameByID(2)\n";
 var_dump($client->getNameByID(2));
+echo "============\n";
+echo "getMember(2)\n";
+var_dump($client->getMember(2));
+echo "============\n";
+echo "getPayableMembershipsByID(2)\n";
+var_dump($client->getPayableMembershipsByID(2));
