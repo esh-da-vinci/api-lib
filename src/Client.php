@@ -232,13 +232,13 @@ class Client
             "ssc_number" => $body['external_id'],
             "is_board" => $body['is_board'],
             "meta" => [
-              "ssc_status" => $body['SSC_status'],
-              "nhb_number" => $body['NHB_number'],
-              "external_NHB" => $dropdown[$body['external_NHB']],
-              "bar_certificate" => $dropdown[$body['bar_certificate']],
-              "EHBO_certificate" => $dropdown[$body['EHBO_certificate']],
-              "bhv_certificate" => $dropdown[$body['bhv_certificate']],
-              "honorary_member" => $dropdown[$body['honorary_member']]
+              "ssc_status" => $body['SSC_status'] ?? null,
+              "nhb_number" => $body['NHB_number'] ?? null,
+              "external_NHB" => $dropdown[$body['external_NHB']] ?? null,
+              "bar_certificate" => $dropdown[$body['bar_certificate']] ?? null,
+              "EHBO_certificate" => $dropdown[$body['EHBO_certificate']] ?? null,
+              "bhv_certificate" => $dropdown[$body['bhv_certificate']] ?? null,
+              "honorary_member" => $dropdown[$body['honorary_member']] ?? null
               ]
         );
 
