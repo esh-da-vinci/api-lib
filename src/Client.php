@@ -35,7 +35,7 @@ class Client
         $stack->push(KeyMiddleware::addData($key, $secret));
         $this->guzzleClient = new GuzzleClient([
         'base_uri' => 'https://davinci.lassie.cloud/',
-        'timeout'  => 5.0,
+        'timeout'  => 30.0,
         'handler' => $stack
     ]);
     }
@@ -210,8 +210,8 @@ class Client
           "address" => [
             "street" => $body['address_street'],
             "number" => $body['address_number'],
-            "city" => $body['city'],
-            "country" => $body['country']
+            "city" => $body['city'] ?? null,
+            "country" => $body['country'] ?? null
             ],
             "phone" => $body['phone_mobile'],
             "email" => $body['email_primary'],
@@ -220,8 +220,8 @@ class Client
               "mail" => $body['pref_mail'],
               "newsletter" => $body['pref_newsletter']
               ],
-              "study"  => $body['subdepartement_id'],
-              "institution" => $body['departement_id'],
+              "study"  => $body['subdepartement_id'] ?? null,
+              "institution" => $body['departement_id'] ?? null,
               "generation" => $body['generation_id'],
             "nick_name" => $body['nick_name'],
             "active" => (bool) $body['active'],
