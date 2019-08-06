@@ -239,7 +239,6 @@ class Client
         $dropdown = $this->getFieldsForPersonTable();
 
         $body = json_decode($response->getBody(), true);
-        var_dump($body);
         $this->checkForError($body);
         $member = array(
           "id" => $body['id'],
