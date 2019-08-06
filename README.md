@@ -55,6 +55,11 @@ Lists all memberships registered in the system for this user. Can also include m
 ###### getPayableMembershipsByID(int $id)
 List all memberships that have yet to be paid for this member.
 
+###### hasToSetPassword(int $id)
+Checks if the given member has a password registered.
+
+###### setNewPassword(int $id, string $pass)
+Register a new password for this member. Extra privileges at Lassie are required for your application to do this.
 
 ##### Exceptions
 Exceptions will be thrown on requests that your app lacks permission for, or when the server cannot be reached. Exceptions include `NotFoundException`, `PermissionDeniedException`.

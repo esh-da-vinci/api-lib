@@ -98,6 +98,41 @@ class Client
     }
 
     /**
+     * Checks if a password has been registered for this user
+     */
+    public function hasToSetPassword($id)
+    {
+        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
+            'query' => ['model_name' => 'person_model', 'method_name' => "get_populated_person", "person_id" => (string) $id]
+        ]);
+
+        $arr = json_decode($response->getBody(), true);
+        $this->checkForError($arr);
+        $hash = $arr['security_hash'];
+        if ($hash === "") {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Sets new password for user
+     */
+    public function setNewPassword($id, $password)
+    {
+        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/update', [
+          'form_params' => [
+            'person_id' => $id,
+            'security_hash' => password_hash($password, PASSWORD_DEFAULT)
+          ]
+      ]);
+
+        $arr = json_decode($response->getBody(), true);
+        $this->checkForError($arr);
+        return true;
+    }
+
+    /**
      * Gets a member list from the server,
      * optionally specifiy active members only
      */
@@ -204,6 +239,7 @@ class Client
         $dropdown = $this->getFieldsForPersonTable();
 
         $body = json_decode($response->getBody(), true);
+        var_dump($body);
         $this->checkForError($body);
         $member = array(
           "id" => $body['id'],
