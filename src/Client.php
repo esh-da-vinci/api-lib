@@ -230,6 +230,19 @@ class Client
         return $ret;
     }
 
+    private function convertInstitution($raw)
+    {
+        if ($raw === "FONTYS") {
+            return "Fontys";
+        } elseif ($raw === "TUE") {
+            return "Eindhoven University of Technology";
+        } elseif ($raw === "OTHER") {
+            return "Other SSC Recognised Organization";
+        } else {
+            return "Unknown";
+        }
+    }
+
     public function getMember($id)
     {
         $response = $this->guzzleClient->request('GET', 'api/v2/model', [
@@ -256,7 +269,7 @@ class Client
               "newsletter" => $body['pref_newsletter']
               ],
               "study"  => $body['study'] ?? null,
-              "institution" => $body['department_id'] ?? null,
+              "institution" => $this->convertInstitution($body['department_id'] ?? null),
               "generation" => $body['generation_id'],
             "nick_name" => $body['nick_name'],
             "active" => (bool) $body['active'],
