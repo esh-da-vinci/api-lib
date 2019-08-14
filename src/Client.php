@@ -123,7 +123,7 @@ class Client
         $response = $this->guzzleClient->request('POST', 'api/v2/management/person/update', [
           'form_params' => [
             'person_id' => $id,
-            'security_hash' => password_hash($password, PASSWORD_DEFAULT)
+            'security hash' => password_hash($password, PASSWORD_DEFAULT)
           ]
       ]);
 
@@ -245,8 +245,8 @@ class Client
           "address" => [
             "street" => $body['address_street'],
             "number" => $body['address_number'],
-            "city" => $body['city'] ?? null,
-            "country" => $body['country'] ?? null
+            "city" => $body['address_city'] ?: null,
+            "country" => $body['address_country'] ?: 'Nederland'
             ],
             "phone" => $body['phone_mobile'],
             "email" => $body['email_primary'],
@@ -255,8 +255,8 @@ class Client
               "mail" => $body['pref_mail'],
               "newsletter" => $body['pref_newsletter']
               ],
-              "study"  => $body['subdepartement_id'] ?? null,
-              "institution" => $body['departement_id'] ?? null,
+              "study"  => $body['study'] ?? null,
+              "institution" => $body['department_id'] ?? null,
               "generation" => $body['generation_id'],
             "nick_name" => $body['nick_name'],
             "active" => (bool) $body['active'],
