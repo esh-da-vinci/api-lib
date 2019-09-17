@@ -187,6 +187,30 @@ class Client
         return $ret;
     }
 
+    public function createPerson($values)
+    {
+        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/create', [
+          'form_params' => $values
+        ]);
+
+        $arr = json_decode($response->getBody(), true);
+        $this->checkForError($arr);
+        return true;
+    }
+
+    public function updatePerson($id, $values)
+    {
+        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/update', [
+          'form_params' => array_merge([
+            'person_id' => $id
+          ], $values)
+        ]);
+
+        $arr = json_decode($response->getBody(), true);
+        $this->checkForError($arr);
+        return true;
+    }
+
     public function getMembershipsByID($id)
     {
         $response = $this->guzzleClient->request('GET', 'api/v2/model', [
