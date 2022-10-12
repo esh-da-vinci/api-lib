@@ -2,21 +2,22 @@
 
 namespace ESHDaVinci\API;
 
+use Exception;
+use GuzzleHttp;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\Client as GuzzleClient;
-use ESHDaVinci\API\Helpers\KeyMiddleware;
 use ESHDaVinci\API\Exceptions\PermissionDeniedException;
 use ESHDaVinci\API\Exceptions\NotFoundException;
 
 /**
-*  Main API Class
-*
-*  Create an instance of this class with your API credentials, obtained from the Communicacie,
-*  and use the methods on the obtained client object to call the required functions.
-*
-*  @author Christiaan Goossens
-*/
+ *  Main API Class
+ *
+ *  Create an instance of this class with your API credentials, obtained from the CommunicaCie,
+ *  and use the methods on the obtained client object to call the required functions.
+ *
+ * @author E.S.H. Da Vinci - CommunicaCie
+ */
 class Client
 {
     private $guzzleClient;
@@ -25,295 +26,233 @@ class Client
      * Creates a new client instance with an API Key and API Secret
      * You can obtain these from the Communicacie, who will register your app in Lassie
      *
-     * @param string $key
-     * @param string $secret
+     * @param string $token static access token for Directus
      */
-    public function __construct(string $key, string $secret)
+    public function __construct(string $token, string $base_url = "https://admin.eshdavinci.nl")
     {
         $stack = new HandlerStack();
         $stack->setHandler(new CurlHandler());
-        $stack->push(KeyMiddleware::addData($key, $secret));
         $this->guzzleClient = new GuzzleClient([
-        'base_uri' => 'https://davinci.lassie.cloud/',
-        'timeout'  => 30.0,
-        'handler' => $stack
-    ]);
+            "base_uri" => $base_url,
+            "timeout" => 4.0,
+            "headers" => [
+                "Authorization" => "Bearer $token",
+                "Content-Type" => "application/json",
+            ]
+        ]);
     }
 
-    /**
-     * Checks the returned body for an error code
-     */
-    private function checkForError($body)
+    /** Checks the returned body for an error code */
+    private function checkForError($response): void
     {
-        if (isset($body['status_code'])) {
-            // An error is detected
-            $status = $body['status_code'];
-            if ($status === 403) {
-                throw new PermissionDeniedException($body['error']);
-            } elseif ($status === 404) {
-                throw new NotFoundException($body['error']);
-            }
-        }
+        $status_code = $response->getStatusCode();
+        if ($status_code % 200 < 100)
+            return;
+        $data = json_decode($response->getBody(), true);
+        var_dump($data);
+        if($status_code === 404)
+            throw new NotFoundException($data["error"]);
+        elseif($status_code == 403)
+            throw new PermissionDeniedException($data["error"]);
+        else
+            throw new Exception($status_code, $data["error"]);
     }
 
-    /**
-     * Get name corresponding to an ID in Lassie
-     */
-    public function getNameByID($id)
-    {
-        $names = $this->getListOfNames();
-        return $names[$id];
+    public function request(string $method, string $url, array $data = []) {
+        if ($method === "POST")
+            $data = [GuzzleHttp\RequestOptions::JSON => $data];
+        $data["http_errors"] = false;
+        var_dump($data);
+        $response = $this->guzzleClient->request($method, $url, $data);
+        $this->checkForError($response);
+        $data = json_decode($response->getBody(), true)["data"];
+        return $data;
     }
 
-    /**
-     * Get list of formatted names from Lassie
-     */
-    public function getListOfNames($active = false)
+    /** Get name corresponding to an ID in Lassie */
+    public function getNameByID($id) {
+        $member = $this->request("GET", "items/Members/$id");
+        return $this->formatMemberName($member);
+    }
+
+    /** Get list of formatted names from Lassie */
+    public function getListOfNames($active = false): array
     {
         $memberList = $this->getMemberList($active);
         $r = [];
         foreach ($memberList as $member) {
-            if ($member['infix'] !== "") {
-                $r[$member['id']] = $member['first_name'] . " " . $member['infix'] . " " . $member['last_name'];
-            } else {
-                $r[$member['id']] = $member['first_name'] . " " . $member['last_name'];
-            }
+            $r[$member["id"]] = $this->formatMemberName($member);
         }
         return $r;
     }
 
-    /**
-     * Authenticates a member with their ID and password, as registered in Lassie
-     */
-    public function authenticate($id, $pass)
-    {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-        'query' => ['model_name' => 'person_model', 'method_name' => "get_populated_person", "person_id" => (string) $id]
-    ]);
+    private static function formatMemberName(array $member) : string{
+        if ($member["infix"] !== "" && $member["infix"] !== null)
+            return $member["first_name"] . " " . $member["infix"] . " " . $member["last_name"];
+        else
+            return $member["first_name"] . " " . $member["last_name"];
+    }
 
-        $arr = json_decode($response->getBody(), true);
-        $this->checkForError($arr);
-        $hash = $arr['security_hash'];
+    private function getSecurityHash(string $member_id): string
+    {
+        $arr = $this->request("SEARCH", "items/PinHashes",
+            ["query" => ["filter" => ["member" => ["_eq" => $member_id]]]]
+        );
+        if (!array_key_exists("data", $arr) || count($arr) === 0)
+            return "";
+        assert(count($arr) === 1);
+        return $arr[0]["hash"];
+    }
+
+    /** Authenticates a member with their ID and password, as registered in Lassie */
+    public function authenticate($id, $pass): bool
+    {
+        $hash = $this->getSecurityHash($id);
         return password_verify($pass, $hash);
     }
 
-    /**
-     * Checks if a password has been registered for this user
-     */
-    public function hasToSetPassword($id)
+    /** Checks if a password has been registered for this user */
+    public function hasToSetPassword($id): bool
     {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-            'query' => ['model_name' => 'person_model', 'method_name' => "get_populated_person", "person_id" => (string) $id]
-        ]);
-
-        $arr = json_decode($response->getBody(), true);
-        $this->checkForError($arr);
-        $hash = $arr['security_hash'];
-        if ($hash === "") {
-            return true;
-        }
-        return false;
+        return $this->getSecurityHash($id) === "";
     }
 
-    /**
-     * Sets new password for user
-     */
-    public function setNewPassword($id, $password)
+    /** Sets new password for user */
+    public function setNewPassword($id, $password) : array
     {
-        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/update', [
-          'form_params' => [
-            'person_id' => $id,
-            'security hash' => password_hash($password, PASSWORD_DEFAULT)
-          ]
-      ]);
-
-        $arr = json_decode($response->getBody(), true);
-        $this->checkForError($arr);
-        return true;
+        $data = ["member" => $id, "hash" => password_hash($password, PASSWORD_DEFAULT)];
+        var_dump($data);
+        return $this->request("POST", "items/PinHashes", $data);
     }
 
-    /**
-     * Gets a member list from the server,
-     * optionally specifiy active members only
+    /** @brief Get a member list from the server
+     *
+     * TODO: Optionally return active members only
      */
-    public function getMemberList($active = false)
+    public function getMemberList($active = false) : array
     {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-            'query' => ['model_name' => 'person_model', 'method_name' => "get_persons"]
+        if ($active === true)
+            return $this->getActiveMemberList();
+        $data = $this->request("GET", "items/Members");
+        return $this->mapMembersToArray($data);
+    }
+
+    private function today() : string {
+        return date("Y-m-d", time());
+    }
+
+    private function getActiveMemberList() : array {
+        $data = $this->request("SEARCH", "items/Memberships", [
+            "query" => ["filter" => [
+                // "type.end" => ["_gte" => $this->today()]
+                "id" => ["_eq" => 1]
+            ]]
         ]);
+        var_dump($data);
+        $ids = array();
+        foreach ($data as $membership)
+            $ids[] = $membership["member"];
+        $data = $this->request("GET", "items/Members", ["data" => $ids]);
+        return $this->mapMembersToArray($data);
+    }
 
-        $array = json_decode($response->getBody(), true);
-        $this->checkForError($array);
-        $rArr = [];
-
-        foreach ($array as $person) {
-            // Filters
-            if ($active && $person['active'] === "0") {
-                // We only want active members
-                continue;
-            }
-
-            if ($person['first_name'] === "" && $person['last_name'] === "") {
-                // User deleted
-                continue;
-            }
-
-            $rArr[] = [
-              "id" => $person['id'],
-              "active" => $person['active'],
-              "first_name" => $person['first_name'],
-              "infix" => $person['infix'],
-              "last_name" => $person['last_name'],
-              "initials" => $person['initials'],
-              "ssc_number" => $person['external_id']
+    private function mapMembersToArray($members) : array {
+        $result = array();
+        foreach ($members as $person) {
+            $result[] = [
+                "id" => $person["id"],
+                "active" => true,  // TODO: This is no longer present in Directus
+                "first_name" => $person["first_name"],
+                "infix" => $person["infix"],
+                "last_name" => $person["last_name"],
+                "initials" => "", // TODO: Add this to Directus
+                "ssc_number" => $person["dms_id"]
             ];
         }
-
-        return $rArr;
+        return $result;
     }
 
-    private function getFieldsForPersonTable()
+    public function createPerson($values) : array
     {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-          'query' => ['model_name' => 'definition_model', 'method_name' => "get_definitions", "table_name" => "pool_options"]
-      ]);
-
-        $resp = json_decode($response->getBody(), true);
-        $this->checkForError($resp);
-        $ret = [];
-        foreach ($resp as $key => $entry) {
-            $ret[$key] = $entry['value'];
-        }
-        return $ret;
+        $address_data = [
+            "street" => $values["address_street"],
+            "number" => $values["address_number"],
+            "post_code" => $values["address_zip"],
+            "city" => $values["address_city"],
+            "country" => $values["address_country"],
+        ];
+        $address = $this->request("POST", "items/MemberAddresses", $address_data);
+        $member_data = [
+            "first_name" => $values["first_name"],
+            "infix" => $values["infix"],
+            "last_name" => $values["last_name"],
+            "phone_number" => $values["phone_home"],
+            "email" => $values["email_primary"],
+            "birth_date" => $values["birthdatebug"],
+            "institution" => $values["department_id"],
+            "study_program" => $values["study"],
+            "address" => $address["id"],
+            "join_date" => $this->today()
+        ];
+        return $this->request("POST", "items/Members", $member_data);
     }
 
-    public function createPerson($values)
+    private static function convertInstitution($raw): string
     {
-        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/create', [
-          'form_params' => $values
-        ]);
-
-        $arr = json_decode($response->getBody(), true);
-        $this->checkForError($arr);
-        return true;
-    }
-
-    public function updatePerson($id, $values)
-    {
-        $response = $this->guzzleClient->request('POST', 'api/v2/management/person/update', [
-          'form_params' => array_merge([
-            'person_id' => $id
-          ], $values)
-        ]);
-
-        $arr = json_decode($response->getBody(), true);
-        $this->checkForError($arr);
-        return true;
-    }
-
-    public function getMembershipsByID($id)
-    {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-          'query' => ['model_name' => 'person_model', 'method_name' => "get_valid_memberships_by_person_id", "person_id" => (string) $id]
-      ]);
-        $body = json_decode($response->getBody(), true);
-        $this->checkForError($body);
-        $ret = [];
-        foreach ($body as $membership) {
-            $ret[] = [
-            "active" => $membership['active'],
-            "name" => $membership['name'],
-            "fee" => $membership['fee'],
-            "issue_date" => $membership['issue_date'],
-            "expiry_date" => $membership['expiry_date'],
-            "is_general_membership" => $membership['is_general_membership']
-          ];
-        }
-        return $ret;
-    }
-
-    public function getPayableMembershipsByID($id)
-    {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-          'query' => ['model_name' => 'person_model', 'method_name' => "get_payable_memberships", "person_id" => (string) $id]
-      ]);
-        $body = json_decode($response->getBody(), true);
-        $this->checkForError($body);
-
-        $ret = [];
-        foreach ($body as $membership) {
-            $ret[] = [
-            "active" => $membership['active'],
-            "name" => $membership['name'],
-            "fee" => $membership['fee'],
-            "issue_date" => $membership['issue_date'],
-            "expiry_date" => $membership['expiry_date'],
-            "is_general_membership" => $membership['is_general_membership']
-          ];
-        }
-        return $ret;
-    }
-
-    private function convertInstitution($raw)
-    {
-        if ($raw === "FONTYS") {
-            return "Fontys";
-        } elseif ($raw === "TUE") {
-            return "Eindhoven University of Technology";
-        } elseif ($raw === "OTHER") {
-            return "Other SSC Recognised Organization";
-        } else {
-            return "Unknown";
-        }
+        $institutions = [
+            "fontys" => "Fontys Hogeschool",
+            "tue" => "Eindhoven University of Technology",
+            "other" => "Other SSCE Recognised Organisation"
+        ];
+        if (array_key_exists($raw, $institutions))
+            return $institutions[$raw];
+        return "Unknown";
     }
 
     public function getMember($id)
     {
-        $response = $this->guzzleClient->request('GET', 'api/v2/model', [
-            'query' => ['model_name' => 'person_model', 'method_name' => "get_populated_person", "person_id" => (string) $id]
+        $member = $this->request("GET", "items/Members/$id");
+        $address = $this->request("GET", "items/MemberAddresses/${member['address']}");
+        $boards = $this->request("SEARCH", "items/Committees", [
+            "query" => ["filter" => ["name" => ["_contains" => "Board"]]]
         ]);
-
-        $dropdown = $this->getFieldsForPersonTable();
-
-        $body = json_decode($response->getBody(), true);
-        $this->checkForError($body);
-        $member = array(
-          "id" => $body['id'],
-          "address" => [
-            "street" => $body['address_street'],
-            "number" => $body['address_number'],
-            "city" => $body['address_city'] ?: null,
-            "country" => $body['address_country'] ?: 'Nederland'
-            ],
-            "phone" => $body['phone_mobile'],
-            "email" => $body['email_primary'],
-            "birthdate" => $body['birthdate'],
-            "preferences" => [
-              "mail" => $body['pref_mail'],
-              "newsletter" => $body['pref_newsletter']
-              ],
-              "study"  => $body['study'] ?? null,
-              "institution" => $this->convertInstitution($body['department_id'] ?? null),
-              "generation" => $body['generation_id'],
-            "nick_name" => $body['nick_name'],
-            "active" => (bool) $body['active'],
-            "first_name" => $body['first_name'],
-            "last_name" => $body['last_name'],
-            "initials" => $body['initials'],
-            "infix" => $body['infix'],
-            "ssc_number" => $body['external_id'],
-            "is_board" => $body['is_board'],
+        foreach ($boards as $board)
+            $board_ids[] = $board["id"];
+        $board = $this->request("SEARCH", "items/CommitteeMembers", [
+            "query" => [ "filter" => [
+                    "committee" => ["_in" => $board_ids],
+                    "end" => ["_gte" => $this->today()],
+                    "member" => ["_eq" => $member["id"]]
+                ]]
+        ]);
+        $is_board = count($board) != 0;
+        $result = array(
+            "id" => $member["id"],
+            "address" => $address,
+            "phone" => $member["phone_number"],
+            "email" => $member["email"],
+            "birthdate" => $member["birth_date"],
+            "study" => $member["study_program"] ?? null,
+            "institution" => $this->convertInstitution($member["institution"] ?? null),
+            "generation" => substr($member["join_date"], 0, 4),
+            "active" => true,
+            "first_name" => $member["first_name"],
+            "last_name" => $member["last_name"],
+            "initials" => "",
+            "infix" => $member["infix"],
+            "ssc_number" => $member["dms_id"],
+            "is_board" => $is_board,
             "meta" => [
-              "ssc_status" => $body['SSC_status'] ?? null,
-              "nhb_number" => $body['NHB_number'] ?? null,
-              "external_NHB" => $dropdown[$body['external_NHB']] ?? null,
-              "bar_certificate" => $dropdown[$body['bar_certificate']] ?? null,
-              "EHBO_certificate" => $dropdown[$body['EHBO_certificate']] ?? null,
-              "bhv_certificate" => $dropdown[$body['bhv_certificate']] ?? null,
-              "honorary_member" => $dropdown[$body['honorary_member']] ?? null
-              ]
+                "ssc_status" => null,  // Not stored in the database anymore
+                "nhb_number" => $member["nhb_id"],
+                "external_NHB" => null,
+                "bar_certificate" => null,
+                "EHBO_certificate" => null,
+                "bhv_certificate" => null,
+                "honorary_member" => null
+            ]
         );
-
-        return $member;
+        return $result;
     }
+
 }

@@ -1,2 +1,4 @@
 vendor/
 tests/credentials.php
+composer.phar
+/.idea

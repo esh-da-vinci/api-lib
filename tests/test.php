@@ -13,30 +13,51 @@ use ESHDaVinci\API\Client;
 include "credentials.php";
 
 $client = new Client(
-    $key,
-    $secret
+    $token,
 );
 
 echo "getListOfNames()\n";
 var_dump($client->getListOfNames(true));
 echo "============\n";
-echo "getMember(2)\n";
-var_dump($client->getMember(2));
+echo "createPerson\n";
+$member = $client->createPerson([
+    "address_street" => "Amazonenlaan",
+    "address_number" => "4",
+    "address_zip" => "5631KW",
+    "address_city" => "Eindhoven",
+    "address_country" => "The Netherlands",
+    "first_name" => "A.dtmin",
+    "infix" => "von",
+    "last_name" => "Lassie",
+    "phone_home" => "000000",
+    "email_primary" => "admin@eshdavinci.nl",
+    "birthdatebug" => "2000-01-01",
+    "department_id" => "tue",
+    "study" => "None",
+]);
 echo "============\n";
-echo "authenticate(2, 12345)\n";
-var_dump($client->authenticate(2, "12345"));
-echo "============\n";
-echo "hasToSetPassword(2)\n";
-var_dump($client->hasToSetPassword(2));
+echo "getMember\n";
+var_dump($client->getMember($member["id"]));
 echo "============\n";
 echo "setNewPassword(2, 12345)\n";
-var_dump($client->setNewPassword(2, "12345"));
+$pin_hash = $client->setNewPassword($member["id"], "12345");
+var_dump($pin_hash);
+echo "============\n";
+echo "authenticate(2, 12345)\n";
+var_dump($client->authenticate($member["id"], "12345"));
+echo "============\n";
+echo "hasToSetPassword\n";
+var_dump($client->hasToSetPassword($member["id"]));
 echo "============\n";
 echo "getMemberList(false)\n";
 var_dump($client->getMemberList(false));
 echo "============\n";
-echo "getNameByID(2)\n";
-var_dump($client->getNameByID(2));
-echo "============\n";
-echo "getPayableMembershipsByID(2)\n";
-var_dump($client->getPayableMembershipsByID(2));
+echo "getNameByID\n";
+var_dump($client->getNameByID($member["id"]));
+echo "=============\n";
+$pin_hash_id = $pin_hash['id'];
+$client->request("DELETE", "items/PinHashes/$pin_hash_id");
+$member_id = $member["id"];
+$client->request("DELETE", "items/Members/$member_id");
+$address_id = $member["address"];
+$client->request("DELETE", "items/MemberAddresses/$address_id");
