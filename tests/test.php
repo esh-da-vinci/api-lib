@@ -6,9 +6,9 @@ use ESHDaVinci\API\Client;
 /**
  * Keep in mind that this is not a full test suite.
  * That is unncessary for this project
-*/
+ */
 
-// IMPORTANT: If you want to test this, you need to create a credentials.php file that has $key and $secret in the tests dir.
+// IMPORTANT: If you want to test this, you need to create a credentials.php file that has $token in the tests dir.
 // This is not included in GIT!
 include "credentials.php";
 
@@ -16,8 +16,9 @@ $client = new Client(
     $token,
 );
 
-echo "getListOfNames()\n";
+echo "getListOfNames() - expecting only active\n";
 var_dump($client->getListOfNames(true));
+
 echo "============\n";
 echo "createPerson\n";
 $member = $client->createPerson([
@@ -35,29 +36,38 @@ $member = $client->createPerson([
     "department_id" => "tue",
     "study" => "None",
 ]);
+var_dump("Created " . $member["id"]);
+assert(intval($meember['id']) > 0, "Member ID not valid");
 echo "============\n";
-echo "getMember\n";
+echo "getMember(ID)\n";
 var_dump($client->getMember($member["id"]));
 echo "============\n";
-echo "setNewPassword(2, 12345)\n";
-$pin_hash = $client->setNewPassword($member["id"], "12345");
-var_dump($pin_hash);
+echo "setNewPassword(ID, 12345)\n";
+$set_pin = $client->setNewPassword($member["id"], "12345");
+if ($set_pin !== true) {
+    var_dump("Pin should be set correctly");
+    die();
+}
 echo "============\n";
-echo "authenticate(2, 12345)\n";
-var_dump($client->authenticate($member["id"], "12345"));
+echo "authenticate(ID, 12345)\n";
+$result = $client->authenticate($member["id"], "12345") === true;
+if (!$result) {
+    var_dump("Cannot login using set pin, check authenticate function");
+    die();
+}
 echo "============\n";
 echo "hasToSetPassword\n";
-var_dump($client->hasToSetPassword($member["id"]));
+$result = $client->hasToSetPassword($member["id"]) === false;
+if (!$result) {
+    var_dump("Password should be set.");
+    die();
+}
 echo "============\n";
-echo "getMemberList(false)\n";
-var_dump($client->getMemberList(false));
+echo "getMemberList()\n";
+var_dump("All member count: ", count($client->getMemberList(false)));
+var_dump("Active member count: ", count($client->getMemberList(true)));
 echo "============\n";
 echo "getNameByID\n";
 var_dump($client->getNameByID($member["id"]));
 echo "=============\n";
-$pin_hash_id = $pin_hash['id'];
-$client->request("DELETE", "items/PinHashes/$pin_hash_id");
-$member_id = $member["id"];
-$client->request("DELETE", "items/Members/$member_id");
-$address_id = $member["address"];
-$client->request("DELETE", "items/MemberAddresses/$address_id");
+var_dump("All done, don't forget to delete test users");

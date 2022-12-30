@@ -2,3 +2,4 @@ vendor/
 tests/credentials.php
 composer.phar
 /.idea
+composer.lock
