@@ -6,37 +6,68 @@ use ESHDaVinci\API\Client;
 /**
  * Keep in mind that this is not a full test suite.
  * That is unncessary for this project
-*/
+ */
 
-// IMPORTANT: If you want to test this, you need to create a credentials.php file that has $key and $secret in the tests dir.
+// IMPORTANT: If you want to test this, you need to create a credentials.php file that has $token in the tests dir.
 // This is not included in GIT!
 include "credentials.php";
 
 $client = new Client(
-    $key,
-    $secret
+    $token,
 );
 
-echo "getListOfNames()\n";
+echo "getListOfNames() - expecting only active\n";
 var_dump($client->getListOfNames(true));
+
 echo "============\n";
-echo "getMember(2)\n";
-var_dump($client->getMember(2));
+echo "createPerson\n";
+$member = $client->createPerson([
+    "address_street" => "Amazonenlaan",
+    "address_number" => "4",
+    "address_zip" => "5631KW",
+    "address_city" => "Eindhoven",
+    "address_country" => "The Netherlands",
+    "first_name" => "A.dtmin",
+    "infix" => "von",
+    "last_name" => "Lassie",
+    "phone_home" => "000000",
+    "email_primary" => "admin@eshdavinci.nl",
+    "birthdatebug" => "2000-01-01",
+    "department_id" => "tue",
+    "study" => "None",
+]);
+var_dump("Created " . $member["id"]);
+assert(intval($meember['id']) > 0, "Member ID not valid");
 echo "============\n";
-echo "authenticate(2, 12345)\n";
-var_dump($client->authenticate(2, "12345"));
+echo "getMember(ID)\n";
+var_dump($client->getMember($member["id"]));
 echo "============\n";
-echo "hasToSetPassword(2)\n";
-var_dump($client->hasToSetPassword(2));
+echo "setNewPassword(ID, 12345)\n";
+$set_pin = $client->setNewPassword($member["id"], "12345");
+if ($set_pin !== true) {
+    var_dump("Pin should be set correctly");
+    die();
+}
 echo "============\n";
-echo "setNewPassword(2, 12345)\n";
-var_dump($client->setNewPassword(2, "12345"));
+echo "authenticate(ID, 12345)\n";
+$result = $client->authenticate($member["id"], "12345") === true;
+if (!$result) {
+    var_dump("Cannot login using set pin, check authenticate function");
+    die();
+}
 echo "============\n";
-echo "getMemberList(false)\n";
-var_dump($client->getMemberList(false));
+echo "hasToSetPassword\n";
+$result = $client->hasToSetPassword($member["id"]) === false;
+if (!$result) {
+    var_dump("Password should be set.");
+    die();
+}
 echo "============\n";
-echo "getNameByID(2)\n";
-var_dump($client->getNameByID(2));
+echo "getMemberList()\n";
+var_dump("All member count: ", count($client->getMemberList(false)));
+var_dump("Active member count: ", count($client->getMemberList(true)));
 echo "============\n";
-echo "getPayableMembershipsByID(2)\n";
-var_dump($client->getPayableMembershipsByID(2));
+echo "getNameByID\n";
+var_dump($client->getNameByID($member["id"]));
+echo "=============\n";
+var_dump("All done, don't forget to delete test users");
