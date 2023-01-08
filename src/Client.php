@@ -285,15 +285,6 @@ class Client implements ClientInterface
      */
     public function createPerson($values): array
     {
-        $address_data = [
-            "street" => $values["address_street"],
-            "number" => $values["address_number"],
-            "post_code" => $values["address_zip"],
-            "city" => $values["address_city"],
-            "country" => $values["address_country"],
-        ];
-
-        $address = $this->request("POST", "items/MemberAddresses", $address_data);
         $member_data = [
             "first_name" => $values["first_name"],
             "infix" => $values["infix"],
@@ -303,7 +294,11 @@ class Client implements ClientInterface
             "birth_date" => $values["birthdatebug"],
             "institution" => $values["department_id"],
             "study_program" => $values["study"],
-            "address" => $address["id"],
+            "address_street" => $values["address_street"],
+            "address_number" => $values["address_number"],
+            "address_postcode" => $values["address_zip"],
+            "address_city" => $values["address_city"],
+            "address_country" => $values["address_country"],
             "join_date" => $this->today()
         ];
 
@@ -338,7 +333,6 @@ class Client implements ClientInterface
     public function getMember($id): array
     {
         $member = $this->requestGET("items/Members/$id");
-        $address = $this->requestGET("items/MemberAddresses/${member['address']}");
         $boards = $this->requestGET(
             "items/Committees",
             ["filter" => ["name" => ["_contains" => "Board"]]]
@@ -360,7 +354,13 @@ class Client implements ClientInterface
         $is_board = count($board) != 0;
         $result = array(
             "id" => $member["id"],
-            "address" => $address,
+            "address" => array (
+                "street" => $member["address_street"],
+                "number" => $member["address_number"],
+                "postcode" => $member["address_postcode"],
+                "city" => $member["address_city"],
+                "country" => $member["address_country"],
+            ),
             "phone" => $member["phone_number"],
             "email" => $member["email"],
             "birthdate" => $member["birth_date"],
