@@ -345,9 +345,18 @@ class Client implements ClientInterface
         $board = $this->requestGET(
             "items/CommitteeMembers",
             ["filter" => [
-                "committee" => ["_in" => $board_ids],
-                "end_date" => ["_gte" => $this->today()],
-                "member" => ["_eq" => strval($member["id"])]
+                "_or" => [
+                    [
+                        "committee" => ["_in" => $board_ids],
+                        "member" => ["_eq" => strval($member["id"])],
+                        "end_date" => ["_gte" => $this->today()]
+                    ],
+                    [
+                        "committee" => ["_in" => $board_ids],
+                        "member" => ["_eq" => strval($member["id"])],
+                        "end_date" => ["_null" => true]
+                    ]
+                ]
             ]]
         );
 
