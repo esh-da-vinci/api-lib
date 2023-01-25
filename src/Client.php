@@ -340,14 +340,17 @@ class Client implements ClientInterface
         $boards = $this->requestGET(
             "items/Committees",
             ["filter" => 
-                ["name" => 
-                    ["_or" => [
+                ["_or" => 
+                    ["name" => 
                         ["_contains" => "Board"],
                         ["_eq" => "CommunicaCie"] // Also regard the CommunicaCie as board to develop things
-                    ]]
+                    ]
                 ]
             ]
         );
+
+        // Fallback
+        $board_ids = [];
 
         foreach ($boards as $board) {
             $board_ids[] = strval($board["id"]);
