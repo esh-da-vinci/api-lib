@@ -149,10 +149,14 @@ class Client implements ClientInterface
      */
     private function formatMemberName(array $member): string
     {
+        // Only show the first letter of the last name for privacy reasons in member lists
+        // This is consistent with the old behaviour
+        $lastnameCapped = substr($member["last_name"], 0, 1) . ".";
+
         if ($member["infix"] !== "" && $member["infix"] !== null) {
-            return $member["first_name"] . " " . $member["infix"] . " " . $member["last_name"];
+            return $member["first_name"] . " " . $member["infix"] . " " . $lastnameCapped;
         } else {
-            return $member["first_name"] . " " . $member["last_name"];
+            return $member['first_name'] . " " . $lastnameCapped;
         }
     }
 
@@ -335,7 +339,14 @@ class Client implements ClientInterface
         $member = $this->requestGET("items/Members/$id");
         $boards = $this->requestGET(
             "items/Committees",
-            ["filter" => ["name" => ["_contains" => "Board"]]]
+            ["filter" => 
+                ["name" => 
+                    ["_or" => [
+                        ["_contains" => "Board"],
+                        ["_eq" => "CommunicaCie"] // Also regard the CommunicaCie as board to develop things
+                    ]]
+                ]
+            ]
         );
 
         foreach ($boards as $board) {
@@ -379,7 +390,7 @@ class Client implements ClientInterface
             "active" => true,
             "first_name" => $member["first_name"],
             "last_name" => $member["last_name"],
-            "initials" => "",
+            "initials" => $member["initials"],
             "infix" => $member["infix"],
             "ssc_number" => $member["dms_id"],
             "is_board" => $is_board,
