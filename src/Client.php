@@ -340,12 +340,10 @@ class Client implements ClientInterface
         $boards = $this->requestGET(
             "items/Committees",
             ["filter" => 
-                ["_or" => 
-                    ["name" => 
-                        ["_contains" => "Board"],
-                        ["_eq" => "CommunicaCie"] // Also regard the CommunicaCie as board to develop things
-                    ]
-                ]
+                ["_or" => [
+                    ["name" => ["_contains" => "Board"]],
+                    ["name" => ["_eq" => "CommunicaCie"]], // Also regard the CommunicaCie as board to develop things
+                ]]
             ]
         );
 
